@@ -89,7 +89,7 @@ def _question_answers(rec: dict) -> str | None:
 
 @mcp.tool()
 def find_my_prompts(
-    project: str,
+    project: str = "",
     query: str = "",
     since: str = "",
     until: str = "",
@@ -114,9 +114,10 @@ def find_my_prompts(
     Not covered: anything said outside Claude Code (e.g. claude.ai chats).
 
     Args:
-        project: REQUIRED. Which project's logs to read: part of the project
-            folder name, e.g. "handoff" or "rosetta". If nothing matches, the
-            available projects are listed.
+        project: Which project's logs to read: part of the project folder
+            name, e.g. "handoff" or "rosetta". Defaults to the folder the
+            agent was started in. If nothing matches, the available projects
+            are listed.
         query: Optional case-insensitive text to filter by; only prompts
             containing it are returned. Leave empty to get everything.
         since / until: Optional ISO date bounds like "2026-10-05".
@@ -124,6 +125,10 @@ def find_my_prompts(
         max_chars: Long prompts (pasted specs) are cut at this length and
             marked [TRUNCATED]. Pass 0 for no limit.
     """
+    if not project.strip():
+        # Claude Code defers MCP tool schemas, so agents sometimes call this
+        # before seeing its arguments. Fall back to the current project.
+        project = Path.cwd().name
     dirs = _matching_projects(project)
     if not dirs:
         available = (
