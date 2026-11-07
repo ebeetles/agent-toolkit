@@ -1,0 +1,25 @@
+diff --git a/prompt_log.md b/prompt_log.md
+index cf428c3..d99f46f 100644
+--- a/prompt_log.md
++++ b/prompt_log.md
+@@ -140,3 +140,20 @@ Seems to work well so far. Here are the rest of the requirements for my assignme
+ ```text
+ Draft prompt_log.md with my verbatim prompts from this session, marking what I need to fill in or rewrite.
+ ```
++
++```text
++Did you follow these directions for the README? We will check this!
++
++Must be named README.md and located at the repository root (or inside the project folder if you placed the project in your portfolio repo). Include:
++- What your app does and why you chose it (1–2 sentences)
++- What you store in the database: where the data came from, what counts as one item, how you broke it up if you did, roughly how many items you loaded, and what metadata (if any) you attach to each one
++- How a user adds new items, and how a user searches
++- Your two queries from the test above, the items they retrieve, and why a keyword search would miss them
++- How we would obtain and load the data ourselves, since the raw dataset shouldn't be committed to your repo
++- Which vector database and embedding model you used, and whether anything downloads on first run
++- How to run your app (what to install, what commands to use)
++```
++
++```text
++Add back a short AI-generated section at the bottom covering how to get and load the data, the vector database and embedding models with first-run downloads, and how to install and run. Don't commit yet.
++```
