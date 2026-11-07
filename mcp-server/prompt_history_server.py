@@ -70,32 +70,55 @@ def _matching_projects(project: str) -> list[Path]:
     )
 
 
+def _question_answers(rec: dict) -> str | None:
+    """My answers to an agent's multiple-choice questions (AskUserQuestion).
+    These are stored as tool results, not prompts, so v1 missed them."""
+    r = rec.get("toolUseResult")
+    if not (isinstance(r, dict) and isinstance(r.get("answers"), dict)):
+        return None
+    labels = {
+        q.get("question"): {o.get("label") for o in q.get("options", [])}
+        for q in r.get("questions", []) if isinstance(q, dict)
+    }
+    lines = []
+    for q, a in r["answers"].items():
+        how = "picked option" if a in labels.get(q, set()) else "typed my own answer"
+        lines.append(f'Q: {q}\nA ({how}): {a}')
+    return "[answer to the agent's multiple-choice question]\n" + "\n".join(lines)
+
+
 @mcp.tool()
 def find_my_prompts(
     project: str,
-    contains: str = "",
+    query: str = "",
     since: str = "",
     until: str = "",
     limit: int = 40,
     max_chars: int = 1500,
 ) -> str:
-    """Return the prompts I (the human) actually typed in past Claude Code
-    sessions for a project, word for word, oldest first, with timestamps.
+    """Return what I (the human) actually said in past Claude Code sessions
+    for one project, word for word, oldest first, with timestamps.
+
+    Example: find_my_prompts(project="rosetta", query="README")
 
     Use this whenever you need my exact past wording: writing or checking a
     prompt_log.md that must contain verbatim prompts, recalling what I asked
     for in an earlier session, or checking whether a quoted prompt is real.
     Do NOT paraphrase, summarize, or "clean up" what this returns; if you quote
-    it, quote it exactly. Compaction summaries, skill text, tool output and
-    slash commands are already filtered out, so everything returned is mine.
+    it, quote it exactly.
+
+    What is included: prompts I sent (including suggested-reply buttons I
+    clicked, which Claude Code logs the same way as typed text), and my answers
+    to the agent's multiple-choice questions, labeled as picked vs typed.
+    Filtered out: compaction summaries, skill text, tool output, slash commands.
+    Not covered: anything said outside Claude Code (e.g. claude.ai chats).
 
     Args:
-        project: Part of the project folder name or path, e.g. "handoff" or
-            "rosetta". Matched case-insensitively against Claude Code's
-            per-project log folders. If nothing matches, the available
-            projects are listed.
-        contains: Optional case-insensitive substring; only prompts containing
-            it are returned.
+        project: REQUIRED. Which project's logs to read: part of the project
+            folder name, e.g. "handoff" or "rosetta". If nothing matches, the
+            available projects are listed.
+        query: Optional case-insensitive text to filter by; only prompts
+            containing it are returned. Leave empty to get everything.
         since / until: Optional ISO date bounds like "2026-10-05".
         limit: Max prompts to return (default 40).
         max_chars: Long prompts (pasted specs) are cut at this length and
@@ -120,15 +143,17 @@ def find_my_prompts(
                         rec = json.loads(line)
                     except json.JSONDecodeError:
                         continue
-                    text = _text_of(rec.get("message", {}).get("content"))
-                    if not text or not _is_human_prompt(rec, text):
-                        continue
+                    text = _question_answers(rec)
+                    if text is None:
+                        text = _text_of(rec.get("message", {}).get("content"))
+                        if not text or not _is_human_prompt(rec, text):
+                            continue
                     ts = rec.get("timestamp", "")
                     if since and ts[: len(since)] < since:
                         continue
                     if until and ts[: len(until)] > until:
                         continue
-                    if contains and contains.lower() not in text.lower():
+                    if query and query.lower() not in text.lower():
                         continue
                     key = (rec.get("sessionId"), text.strip())
                     if key in seen:
